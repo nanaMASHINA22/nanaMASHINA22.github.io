@@ -5,20 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Радиальная записная книжка</title>
     <style>
+        /* ---------- БАЗА ---------- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
             background: #0d1117;
             color: #e6edf3;
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            height: 100vh;
-            overflow: hidden;
             touch-action: none;
             user-select: none;
         }
 
         /* ---------- ЦЕНТР ---------- */
         #center {
-            position: fixed;
+            position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -39,9 +44,9 @@
         }
         #center:active { transform: translate(-50%, -50%) scale(0.92); }
 
-        /* ---------- РАДИАЛЬНЫЕ КНОПКИ (все круглые) ---------- */
+        /* ---------- РАДИАЛЬНЫЕ КНОПКИ ---------- */
         .radial-btn {
-            position: fixed;
+            position: absolute;
             width: 64px;
             height: 64px;
             border-radius: 50%;
@@ -65,13 +70,12 @@
             background: #30363d;
         }
 
-        /* ---------- ЦВЕТА ДЛЯ РАЗНЫХ ДЕЙСТВИЙ ---------- */
         .radial-btn.back { background: #2d1b1b; border-color: #5c2a2a; color: #f08888; }
         .radial-btn.danger { background: #2d1b1b; border-color: #5c2a2a; color: #f85149; }
         .radial-btn.action { background: #1b2d2b; border-color: #2a5c5a; color: #7ee0d8; }
         .radial-btn.project { background: #1c2333; border-color: #30363d; color: #e6edf3; }
 
-        /* ---------- ВКЛАДКА (только заголовок + текст) ---------- */
+        /* ---------- ВКЛАДКА ---------- */
         #tab-container {
             position: fixed;
             top: 16px;
@@ -117,7 +121,7 @@
         }
         #tab-text:focus { border-color: #58a6ff; }
 
-        /* ---------- АДАПТАЦИЯ ДЛЯ ТЕЛЕФОНА ---------- */
+        /* ---------- АДАПТАЦИЯ ---------- */
         @media (max-width: 600px) {
             #center { width: 64px; height: 64px; font-size: 26px; }
             .radial-btn { width: 54px; height: 54px; font-size: 20px; }
@@ -138,10 +142,8 @@
 </head>
 <body>
 
-    <!-- ЦЕНТРАЛЬНАЯ КНОПКА -->
     <button id="center" aria-label="Главное меню">✦</button>
 
-    <!-- ПАНЕЛЬ РЕДАКТОРА (без кнопок!) -->
     <div id="tab-container">
         <div id="tab-title">Заголовок</div>
         <textarea id="tab-text" placeholder="Ваши мысли, идеи, код..."></textarea>
@@ -163,7 +165,7 @@
 
         let currentNode = tree;
         let history = [];
-        let menuMode = 'main'; // 'main' | 'nav'
+        let menuMode = 'main';
 
         // ============================================================
         //  2. РАБОТА С ХРАНИЛИЩЕМ
@@ -206,24 +208,33 @@
         function genId() { return 'n' + Date.now() + Math.random().toString(36).slice(2, 6); }
 
         // ============================================================
-        //  3. РАДИАЛЬНОЕ МЕНЮ
+        //  3. ПОЛУЧЕНИЕ ЦЕНТРА ЭКРАНА (С УЧЁТОМ МОБИЛЬНЫХ БРАУЗЕРОВ)
+        // ============================================================
+        function getCenter() {
+            // Используем document.documentElement.clientHeight для стабильности
+            const w = window.innerWidth;
+            const h = document.documentElement.clientHeight || window.innerHeight;
+            return { x: w / 2, y: h / 2 };
+        }
+
+        // ============================================================
+        //  4. РАДИАЛЬНОЕ МЕНЮ
         // ============================================================
         function renderRadial(node) {
             document.querySelectorAll('.radial-btn').forEach(el => el.remove());
 
             const children = node.children || [];
             const count = children.length;
-            const radius = Math.min(window.innerWidth, window.innerHeight) * 0.28;
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
+            const center = getCenter();
+            const radius = Math.min(window.innerWidth, document.documentElement.clientHeight || window.innerHeight) * 0.28;
 
-            // ---- РЕЖИМ НАВИГАЦИИ: показываем проекты ----
+            // ---- РЕЖИМ НАВИГАЦИИ ----
             if (menuMode === 'nav') {
                 if (count === 0) {
                     const hint = document.createElement('div');
                     hint.className = 'radial-btn';
                     hint.style.cssText = `
-                        left: ${centerX - 30}px; top: ${centerY - 30}px;
+                        left: ${center.x - 30}px; top: ${center.y - 30}px;
                         width: 60px; height: 60px; font-size: 12px;
                         background: #1c2333; border-color: #30363d;
                         color: #8b949e; pointer-events: none;
@@ -238,8 +249,8 @@
 
                 children.forEach((child, i) => {
                     const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
-                    const x = centerX + radius * Math.cos(angle) - 32;
-                    const y = centerY + radius * Math.sin(angle) - 32;
+                    const x = center.x + radius * Math.cos(angle) - 32;
+                    const y = center.y + radius * Math.sin(angle) - 32;
                     const btn = document.createElement('button');
                     btn.className = 'radial-btn project';
                     btn.style.left = x + 'px';
@@ -253,7 +264,7 @@
                 return;
             }
 
-            // ---- РЕЖИМ ОСНОВНОГО МЕНЮ (ВСЕ ДЕЙСТВИЯ — РАДИАЛЬНЫЕ КНОПКИ) ----
+            // ---- ОСНОВНОЕ МЕНЮ ----
             const actions = [
                 { icon: '➕', label: 'Создать', action: addChild, cls: 'action' },
                 { icon: '📂', label: 'Открыть', action: switchToNav, cls: 'project' },
@@ -263,8 +274,8 @@
 
             actions.forEach((act, i) => {
                 const angle = (i / actions.length) * 2 * Math.PI - Math.PI / 2;
-                const x = centerX + radius * Math.cos(angle) - 32;
-                const y = centerY + radius * Math.sin(angle) - 32;
+                const x = center.x + radius * Math.cos(angle) - 32;
+                const y = center.y + radius * Math.sin(angle) - 32;
                 const btn = document.createElement('button');
                 btn.className = 'radial-btn ' + act.cls;
                 btn.style.left = x + 'px';
@@ -277,9 +288,8 @@
         }
 
         // ============================================================
-        //  4. ДЕЙСТВИЯ
+        //  5. ДЕЙСТВИЯ
         // ============================================================
-
         function addChild() {
             const newId = genId();
             const newChild = {
@@ -341,7 +351,7 @@
         }
 
         // ============================================================
-        //  5. ВКЛАДКА (редактор)
+        //  6. ВКЛАДКА
         // ============================================================
         function updateTab() {
             document.getElementById('tab-title').textContent = currentNode.title || 'Без названия';
@@ -354,7 +364,6 @@
             saveTree();
         });
 
-        // Закрываем вкладку по клику вне радиального меню и центра
         document.addEventListener('click', (e) => {
             const container = document.getElementById('tab-container');
             const isInside = container.contains(e.target);
@@ -366,7 +375,7 @@
         });
 
         // ============================================================
-        //  6. ЦЕНТРАЛЬНАЯ КНОПКА
+        //  7. ЦЕНТРАЛЬНАЯ КНОПКА
         // ============================================================
         document.getElementById('center').onclick = () => {
             if (menuMode === 'nav') {
@@ -382,7 +391,7 @@
         };
 
         // ============================================================
-        //  7. АДАПТАЦИЯ
+        //  8. АДАПТАЦИЯ ПРИ ИЗМЕНЕНИИ РАЗМЕРА
         // ============================================================
         let resizeTimer;
         window.addEventListener('resize', () => {
@@ -390,8 +399,14 @@
             resizeTimer = setTimeout(() => renderRadial(currentNode), 200);
         });
 
+        // Также пересчитываем при скролле (на случай, если адресная строка скрылась)
+        window.addEventListener('scroll', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => renderRadial(currentNode), 200);
+        });
+
         // ============================================================
-        //  8. TOAST
+        //  9. TOAST
         // ============================================================
         function showToast(msg) {
             const old = document.getElementById('toast');
@@ -414,7 +429,7 @@
         }
 
         // ============================================================
-        //  9. СТАРТ
+        //  10. СТАРТ
         // ============================================================
         loadTree();
         if (!tree || !tree.id) {
