@@ -1,133 +1,116 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Моя записная книжка</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Радиальная записная книжка</title>
     <style>
-        /* ------- ОБЩИЕ СТИЛИ ------- */
+        /* ---------- БАЗА ---------- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
             background: #0d1117;
             color: #e6edf3;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             height: 100vh;
             overflow: hidden;
+            touch-action: none;
             user-select: none;
         }
 
-        /* ------- ЦЕНТРАЛЬНАЯ КНОПКА ------- */
+        /* ---------- ЦЕНТР ---------- */
         #center {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 72px;
-            height: 72px;
+            width: 76px;
+            height: 76px;
             border-radius: 50%;
             background: radial-gradient(circle at 30% 30%, #58a6ff, #1f6feb);
             border: 2px solid #58a6ff;
             color: #fff;
-            font-size: 28px;
+            font-size: 32px;
             cursor: pointer;
             z-index: 100;
             box-shadow: 0 0 40px rgba(88, 166, 255, 0.3);
             transition: 0.2s;
-        }
-        #center:hover {
-            transform: translate(-50%, -50%) scale(1.08);
-            box-shadow: 0 0 60px rgba(88, 166, 255, 0.5);
-        }
-
-        /* ------- РАДИАЛЬНЫЕ КНОПКИ ------- */
-        .radial-btn {
-            position: fixed;
-            width: 100px;
-            height: 44px;
-            border-radius: 22px;
-            background: #21262d;
-            border: 1px solid #30363d;
-            color: #e6edf3;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: 0.15s;
-            z-index: 50;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            backdrop-filter: blur(4px);
-            padding: 0 12px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
-        .radial-btn:hover {
-            background: #30363d;
+        #center:active { transform: translate(-50%, -50%) scale(0.92); }
+
+        /* ---------- РАДИАЛЬНЫЕ КНОПКИ (все круглые) ---------- */
+        .radial-btn {
+            position: fixed;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #21262d;
+            border: 1.5px solid #30363d;
+            color: #e6edf3;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 50;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            transition: 0.12s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            font-weight: 500;
+        }
+        .radial-btn:active {
+            transform: scale(0.88);
             border-color: #58a6ff;
-            transform: scale(1.05);
-            box-shadow: 0 0 24px rgba(88, 166, 255, 0.2);
+            background: #30363d;
         }
 
-        /* ------- ВКЛАДКА (ПАНЕЛЬ) ------- */
+        /* ---------- КНОПКА "НАЗАД" (отдельный цвет) ---------- */
+        .radial-btn.back {
+            background: #2d1b1b;
+            border-color: #5c2a2a;
+            color: #f08888;
+        }
+        .radial-btn.danger {
+            background: #2d1b1b;
+            border-color: #5c2a2a;
+            color: #f85149;
+        }
+        .radial-btn.action {
+            background: #1b2d2b;
+            border-color: #2a5c5a;
+            color: #7ee0d8;
+        }
+
+        /* ---------- ВКЛАДКА (панель редактора) ---------- */
         #tab-container {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            bottom: 20px;
-            width: 420px;
+            top: 16px;
+            right: 16px;
+            bottom: 16px;
+            left: 16px;
             background: #161b22;
-            border-radius: 16px;
+            border-radius: 20px;
             padding: 20px;
             display: none;
             flex-direction: column;
             border: 1px solid #30363d;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+            box-shadow: 0 8px 48px rgba(0,0,0,0.8);
             z-index: 200;
+            backdrop-filter: blur(8px);
         }
-        #tab-container.active {
-            display: flex;
-        }
+        #tab-container.active { display: flex; }
 
-        /* ------- ШАПКА ВКЛАДКИ ------- */
-        .tab-header {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 14px;
-            flex-shrink: 0;
-        }
-        .tab-header button {
-            background: #21262d;
-            border: 1px solid #30363d;
-            color: #e6edf3;
-            padding: 6px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: 0.15s;
-        }
-        .tab-header button:hover {
-            background: #30363d;
-            border-color: #58a6ff;
-        }
-        .tab-header .btn-danger:hover {
-            border-color: #f85149;
-            color: #f85149;
-        }
-
-        /* ------- ТЕЛО ВКЛАДКИ ------- */
-        #tab-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            overflow: hidden;
-        }
         #tab-title {
             font-size: 20px;
             font-weight: 600;
-            color: #f0f6fc;
-            padding-bottom: 8px;
+            padding-bottom: 10px;
             border-bottom: 1px solid #30363d;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+            color: #f0f6fc;
+            word-break: break-word;
         }
         #tab-text {
             flex: 1;
@@ -135,106 +118,98 @@
             background: #0d1117;
             color: #e6edf3;
             border: 1px solid #30363d;
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 14px;
-            font-size: 14px;
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 15px;
+            font-family: inherit;
             resize: none;
             outline: none;
-            transition: 0.15s;
             line-height: 1.6;
+            min-height: 120px;
         }
-        #tab-text:focus {
-            border-color: #58a6ff;
-            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
-        }
+        #tab-text:focus { border-color: #58a6ff; }
 
-        /* ------- СЧЁТЧИК В КНОПКАХ ------- */
-        .badge {
-            background: #1f6feb;
-            color: #fff;
-            border-radius: 10px;
+        /* ---------- ЗАКРЫТЬ ВКЛАДКУ (кнопка-крестик в углу) ---------- */
+        #close-tab {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-size: 28px;
+            cursor: pointer;
             padding: 0 8px;
-            font-size: 11px;
-            margin-left: 6px;
+            line-height: 1;
         }
+        #close-tab:hover { color: #f0f6fc; }
 
-        /* ------- АДАПТАЦИЯ ПОД ТЕЛЕФОН ------- */
-        @media (max-width: 640px) {
+        /* ---------- АДАПТАЦИЯ ДЛЯ ТЕЛЕФОНА ---------- */
+        @media (max-width: 600px) {
+            #center { width: 64px; height: 64px; font-size: 26px; }
+            .radial-btn { width: 54px; height: 54px; font-size: 20px; }
             #tab-container {
-                width: calc(100% - 16px);
                 top: 8px;
                 right: 8px;
                 bottom: 8px;
+                left: 8px;
                 padding: 14px;
-                border-radius: 12px;
+                border-radius: 16px;
             }
-            .radial-btn {
-                width: 70px;
-                height: 36px;
-                font-size: 11px;
-                border-radius: 18px;
-            }
-            #center {
-                width: 56px;
-                height: 56px;
-                font-size: 20px;
-            }
+            #tab-title { font-size: 17px; }
+            #tab-text { font-size: 14px; padding: 12px; }
+        }
+
+        @media (max-width: 400px) {
+            #center { width: 54px; height: 54px; font-size: 22px; }
+            .radial-btn { width: 46px; height: 46px; font-size: 17px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- ЦЕНТРАЛЬНАЯ КНОПКА (ДОМОЙ) -->
-    <button id="center">✦</button>
+    <!-- ЦЕНТРАЛЬНАЯ КНОПКА -->
+    <button id="center" aria-label="Главное меню">✦</button>
 
-    <!-- ПАНЕЛЬ ВКЛАДКИ -->
+    <!-- ПАНЕЛЬ РЕДАКТОРА -->
     <div id="tab-container">
-        <div class="tab-header">
-            <button id="backBtn">← Назад</button>
-            <button id="addChildBtn">+ Вкладка</button>
-            <button id="deleteBtn" class="btn-danger">✕</button>
-        </div>
-        <div id="tab-content">
-            <div id="tab-title">Заголовок</div>
-            <textarea id="tab-text" placeholder="Ваши мысли, код, идеи..."></textarea>
-        </div>
+        <button id="close-tab" aria-label="Закрыть">✕</button>
+        <div id="tab-title">Заголовок</div>
+        <textarea id="tab-text" placeholder="Ваши мысли, идеи, код..."></textarea>
     </div>
 
     <script>
         // ============================================================
-        //  1. СОСТОЯНИЕ (всё дерево хранится в localStorage)
+        //  1. СОСТОЯНИЕ
         // ============================================================
         let tree = {
             id: 'root',
             title: '🏠 Главная',
-            content: 'Добро пожаловать в вашу записную книжку!',
+            content: 'Добро пожаловать в радиальную записную книжку!',
             children: [
-                { id: 'p1', title: '📌 Проект 1', content: 'Описание проекта...', children: [] },
-                { id: 'p2', title: '📌 Проект 2', content: 'Идеи для сайта...', children: [] }
+                { id: 'p1', title: '📌 Проект 1', content: 'Идеи по проекту...', children: [] },
+                { id: 'p2', title: '📌 Проект 2', content: 'Чертежи...', children: [] }
             ]
         };
 
-        let currentNode = tree;          // текущий открытый узел
-        let history = [];               // стек для кнопки "Назад"
+        let currentNode = tree;
+        let history = [];
+        let menuMode = 'main'; // 'main' | 'nav'
 
         // ============================================================
-        //  2. ЗАГРУЗКА / СОХРАНЕНИЕ
+        //  2. РАБОТА С ХРАНИЛИЩЕМ
         // ============================================================
         function loadTree() {
-            const saved = localStorage.getItem('myRadialTree');
-            if (saved) {
-                try { tree = JSON.parse(saved); } catch(e) {}
-            }
+            try {
+                const saved = localStorage.getItem('radialTree');
+                if (saved) { tree = JSON.parse(saved); }
+            } catch(e) {}
         }
 
         function saveTree() {
-            localStorage.setItem('myRadialTree', JSON.stringify(tree));
+            localStorage.setItem('radialTree', JSON.stringify(tree));
         }
 
-        // ============================================================
-        //  3. ПОИСК УЗЛА ПО ID (рекурсивно)
-        // ============================================================
         function findNode(root, id) {
             if (root.id === id) return root;
             for (const child of (root.children || [])) {
@@ -243,6 +218,26 @@
             }
             return null;
         }
+
+        function findParent(root, childId) {
+            for (const child of (root.children || [])) {
+                if (child.id === childId) return root;
+                const found = findParent(child, childId);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function countNodes(node) {
+            let c = 1;
+            for (const child of (node.children || [])) c += countNodes(child);
+            return c;
+        }
+
+        // ============================================================
+        //  3. ГЕНЕРАЦИЯ УНИКАЛЬНОГО ID
+        // ============================================================
+        function genId() { return 'n' + Date.now() + Math.random().toString(36).slice(2, 6); }
 
         // ============================================================
         //  4. РАДИАЛЬНОЕ МЕНЮ
@@ -253,43 +248,143 @@
 
             const children = node.children || [];
             const count = children.length;
-            if (!count) return;
 
-            const radius = 160;
+            const radius = Math.min(window.innerWidth, window.innerHeight) * 0.28;
             const centerX = window.innerWidth / 2;
             const centerY = window.innerHeight / 2;
 
-            children.forEach((child, i) => {
-                const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
-                const x = centerX + radius * Math.cos(angle) - 50;
-                const y = centerY + radius * Math.sin(angle) - 22;
+            // ---- РЕЖИМ НАВИГАЦИИ: показываем проекты ----
+            if (menuMode === 'nav') {
+                if (count === 0) {
+                    // Если нет проектов — показываем подсказку
+                    const hint = document.createElement('div');
+                    hint.className = 'radial-btn';
+                    hint.style.cssText = `
+                        left: ${centerX - 30}px; top: ${centerY - 30}px;
+                        width: 60px; height: 60px; font-size: 12px;
+                        background: #1c2333; border-color: #30363d;
+                        color: #8b949e; pointer-events: none;
+                        border-radius: 50%;
+                        display: flex; align-items: center; justify-content: center;
+                        z-index: 40;
+                    `;
+                    hint.textContent = 'Пусто';
+                    document.body.appendChild(hint);
+                    return;
+                }
 
+                children.forEach((child, i) => {
+                    const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
+                    const x = centerX + radius * Math.cos(angle) - 32;
+                    const y = centerY + radius * Math.sin(angle) - 32;
+                    const btn = document.createElement('button');
+                    btn.className = 'radial-btn';
+                    btn.style.left = x + 'px';
+                    btn.style.top = y + 'px';
+                    btn.textContent = child.title.charAt(0) || '📄';
+                    btn.title = child.title;
+                    btn.dataset.id = child.id;
+                    btn.onclick = () => openNode(child.id);
+                    document.body.appendChild(btn);
+                });
+                return;
+            }
+
+            // ---- РЕЖИМ ОСНОВНОГО МЕНЮ (действия) ----
+            const actions = [
+                { icon: '➕', label: 'Создать', action: addChild, cls: 'action' },
+                { icon: '📂', label: 'Открыть', action: switchToNav, cls: '' },
+                { icon: '🗑️', label: 'Удалить', action: deleteCurrent, cls: 'danger' },
+                { icon: '⬅️', label: 'Назад', action: goBack, cls: 'back' }
+            ];
+
+            actions.forEach((act, i) => {
+                const angle = (i / actions.length) * 2 * Math.PI - Math.PI / 2;
+                const x = centerX + radius * Math.cos(angle) - 32;
+                const y = centerY + radius * Math.sin(angle) - 32;
                 const btn = document.createElement('button');
-                btn.className = 'radial-btn';
+                btn.className = 'radial-btn ' + act.cls;
                 btn.style.left = x + 'px';
                 btn.style.top = y + 'px';
-                btn.textContent = child.title || 'Без названия';
-                btn.dataset.id = child.id;
-                btn.onclick = () => openNode(child.id);
+                btn.textContent = act.icon;
+                btn.title = act.label;
+                btn.onclick = act.action;
                 document.body.appendChild(btn);
             });
         }
 
         // ============================================================
-        //  5. ОТКРЫТИЕ УЗЛА
+        //  5. ДЕЙСТВИЯ
         // ============================================================
+
+        // 5.1. Создать дочерний узел
+        function addChild() {
+            const newId = genId();
+            const newChild = {
+                id: newId,
+                title: '📄 Новая идея',
+                content: '',
+                children: []
+            };
+            currentNode.children.push(newChild);
+            saveTree();
+            renderRadial(currentNode);
+            // Автоматически открываем новую вкладку
+            openNode(newId);
+        }
+
+        // 5.2. Переключиться в режим навигации (показать проекты)
+        function switchToNav() {
+            menuMode = 'nav';
+            renderRadial(currentNode);
+        }
+
+        // 5.3. Удалить текущий узел
+        function deleteCurrent() {
+            if (currentNode.id === 'root') {
+                showToast('Нельзя удалить корневую вкладку');
+                return;
+            }
+            const parent = findParent(tree, currentNode.id);
+            if (!parent) return;
+            parent.children = parent.children.filter(c => c.id !== currentNode.id);
+            saveTree();
+            history = [];
+            currentNode = parent;
+            menuMode = 'main';
+            updateTab();
+            renderRadial(currentNode);
+        }
+
+        // 5.4. Назад (по истории)
+        function goBack() {
+            if (history.length === 0) {
+                showToast('Нечего возвращать');
+                return;
+            }
+            const prevId = history.pop();
+            const prevNode = findNode(tree, prevId);
+            if (prevNode) {
+                currentNode = prevNode;
+                menuMode = 'main';
+                updateTab();
+                renderRadial(currentNode);
+            }
+        }
+
+        // 5.5. Открыть узел (переход по проекту)
         function openNode(id) {
             const node = findNode(tree, id);
             if (!node) return;
             history.push(currentNode.id);
             currentNode = node;
+            menuMode = 'main';
             updateTab();
             renderRadial(currentNode);
-            // Перерисовываем при изменении размера окна
         }
 
         // ============================================================
-        //  6. ОБНОВЛЕНИЕ ВКЛАДКИ (панель справа)
+        //  6. ВКЛАДКА (редактор)
         // ============================================================
         function updateTab() {
             document.getElementById('tab-title').textContent = currentNode.title || 'Без названия';
@@ -297,81 +392,38 @@
             document.getElementById('tab-container').classList.add('active');
         }
 
-        // ============================================================
-        //  7. СОБЫТИЯ
-        // ============================================================
-
-        // 7.1. Сохранение текста при вводе
+        // Сохранение текста
         document.getElementById('tab-text').addEventListener('input', (e) => {
             currentNode.content = e.target.value;
             saveTree();
         });
 
-        // 7.2. Кнопка "Назад"
-        document.getElementById('backBtn').onclick = () => {
-            if (history.length === 0) return;
-            const prevId = history.pop();
-            const prevNode = findNode(tree, prevId);
-            if (prevNode) {
-                currentNode = prevNode;
-                updateTab();
+        // Закрыть вкладку
+        document.getElementById('close-tab').onclick = () => {
+            document.getElementById('tab-container').classList.remove('active');
+        };
+
+        // ============================================================
+        //  7. ЦЕНТРАЛЬНАЯ КНОПКА (возврат в корень или в основное меню)
+        // ============================================================
+        document.getElementById('center').onclick = () => {
+            // Если мы в режиме навигации — возвращаемся в основное меню
+            if (menuMode === 'nav') {
+                menuMode = 'main';
                 renderRadial(currentNode);
-            }
-        };
-
-        // 7.3. Кнопка "+ Вкладка" (создаёт дочерний узел)
-        document.getElementById('addChildBtn').onclick = () => {
-            const newId = 'n' + Date.now();
-            const newChild = {
-                id: newId,
-                title: 'Новая вкладка',
-                content: '',
-                children: []
-            };
-            currentNode.children.push(newChild);
-            saveTree();
-            renderRadial(currentNode);
-            // Автоматически открываем созданную вкладку
-            openNode(newId);
-        };
-
-        // 7.4. Кнопка "✕ Удалить" — удаляет текущий узел
-        document.getElementById('deleteBtn').onclick = () => {
-            if (currentNode.id === 'root') {
-                alert('Нельзя удалить корневую вкладку.');
                 return;
             }
-            // Находим родителя
-            const parent = findParent(tree, currentNode.id);
-            if (!parent) return;
-            parent.children = parent.children.filter(c => c.id !== currentNode.id);
-            saveTree();
-            // Возвращаемся в родителя
-            history = [];
-            currentNode = parent;
-            updateTab();
-            renderRadial(parent);
-        };
-
-        // Вспомогательная функция: найти родителя узла
-        function findParent(root, childId) {
-            for (const child of (root.children || [])) {
-                if (child.id === childId) return root;
-                const found = findParent(child, childId);
-                if (found) return found;
-            }
-            return null;
-        }
-
-        // 7.5. Кнопка "✦" (центр) — возврат в корень
-        document.getElementById('center').onclick = () => {
+            // Иначе — идём в корень
             history = [];
             currentNode = tree;
+            menuMode = 'main';
             updateTab();
             renderRadial(tree);
         };
 
-        // 7.6. Закрытие вкладки при клике вне неё и вне кнопок
+        // ============================================================
+        //  8. ЗАКРЫТИЕ ВКЛАДКИ ПО КЛИКУ ВНЕ
+        // ============================================================
         document.addEventListener('click', (e) => {
             const container = document.getElementById('tab-container');
             const isInside = container.contains(e.target);
@@ -382,20 +434,42 @@
             }
         });
 
-        // 7.7. Пересчёт радиального меню при изменении размера окна
-        let resizeTimeout;
+        // ============================================================
+        //  9. АДАПТАЦИЯ ПРИ ПОВОРОТЕ / ИЗМЕНЕНИИ РАЗМЕРА
+        // ============================================================
+        let resizeTimer;
         window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                renderRadial(currentNode);
-            }, 150);
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => renderRadial(currentNode), 200);
         });
 
         // ============================================================
-        //  8. СТАРТ
+        // 10. TOAST-УВЕДОМЛЕНИЯ
+        // ============================================================
+        function showToast(msg) {
+            const old = document.getElementById('toast');
+            if (old) old.remove();
+            const t = document.createElement('div');
+            t.id = 'toast';
+            t.style.cssText = `
+                position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+                background: #21262d; color: #e6edf3; padding: 10px 22px;
+                border-radius: 30px; border: 1px solid #30363d;
+                font-size: 14px; z-index: 999;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+                transition: opacity 0.3s;
+                max-width: 80%;
+                text-align: center;
+            `;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 1800);
+        }
+
+        // ============================================================
+        // 11. СТАРТ
         // ============================================================
         loadTree();
-        // Если в дереве нет корня — пересоздаём
         if (!tree || !tree.id) {
             tree = {
                 id: 'root',
@@ -405,17 +479,11 @@
             };
         }
         currentNode = tree;
-        updateTab();
+        menuMode = 'main';
         renderRadial(tree);
         saveTree();
 
-        // Небольшой лог в консоль для отладки
-        console.log('📒 Записная книжка загружена! Узлов:', countNodes(tree));
-        function countNodes(node) {
-            let c = 1;
-            for (const child of (node.children || [])) c += countNodes(child);
-            return c;
-        }
+        console.log('📒 Радиальная записная книжка загружена. Узлов:', countNodes(tree));
     </script>
 </body>
 </html>
