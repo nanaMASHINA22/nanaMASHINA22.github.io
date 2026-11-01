@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoCal MS-ES1 Emulator</title>
+
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta property="og:title" content="AutoCal MS-ES1 Emulator">
+    <meta property="og:description" content="Эмулятор языка MS-ES1 для HBM NTM">
+    <meta property="og:image" content="https://nanamashina22.github.io/favicon.jpg">
+    <meta property="og:url" content="https://nanamashina22.github.io/">
+
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background: #2b2b2b;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            /* Запрещаем автоматический зум на iOS */
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .machine-container {
+            position: relative;
+            aspect-ratio: 848 / 1747;
+            height: 98vh;
+            max-width: 98vw;
+            background-image: url('../img/bg.png');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* --- ОБЩИЕ НАСТРОЙКИ КНОПОК --- */
+        .btn {
+            position: absolute;
+            cursor: pointer;
+            border: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: filter 0.1s ease;
+        }
+
+        .btn:hover { filter: brightness(0.8); }
+        .btn:active { filter: brightness(0.5); }
+
+        .btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        /* --- ЗОНЫ --- */
+        .screen-zone {
+            position: absolute;
+            top: 20%; left: 2%; width: 95.7%; height: 18.3%;
+            background: transparent;
+            overflow: hidden;
+            pointer-events: auto;
+        }
+        .screen-text {
+            color: #3f3;
+            font-size: 16px;
+            padding: 10px;
+            height: 100%;
+            overflow: hidden;
+            white-space: normal;
+        }
+        .screen-text .error { color: #f33; font-weight: bold; }
+        .screen-text .info { color: #aaa; font-style: italic; }
+        .screen-text .time { color: #ff0; font-size: 12px; float: right; }
+
+        .editor-zone {
+            position: absolute;
+            top: 49.7%; left: 2%; width: 95.7%; height: 18.3%;
+        }
+        .editor-text {
+            width: 100%; height: 100%; background: transparent; color: #3f3; border: none;
+            font-family: 'Courier New', monospace; font-size: 16px; resize: none; outline: none;
+            padding: 10px; pointer-events: auto;
+        }
+
+        /* --- КООРДИНАТЫ КНОПОК --- */
+        .btn-power { top: 10.1%; left: 3%; width: 11%; height: 5.5%; }
+        .btn-ignore { top: 10.1%; left: 15%; width: 11%; height: 5.5%; }
+        .btn-reboot { top: 10.1%; left: 26.8%; width: 11%; height: 5.5%; }
+        .btn-step   { top: 10.1%; left: 38.9%; width: 11%; height: 5.5%; }
+        .btn-load   { top: 10.1%; left: 50.8%; width: 11%; height: 5.5%; }
+        .btn-folder { top: 10.1%; left: 62.5%; width: 11%; height: 5.5%; }
+        .btn-save   { top: 10.1%; left: 74%; width: 11%; height: 5.5%; }
+        .btn-doc    { top: 10.1%; left: 85.8%; width: 11%; height: 5.5%; }
+
+        /* Нижний терминал РпР */
+        .terminal-zone {
+            position: absolute;
+            top: 79.5%; left: 2%; width: 95.7%; height: 18.1%;
+            background: transparent; overflow: hidden; pointer-events: auto;
+            display: flex; flex-direction: column; justify-content: flex-end;
+            padding: 10px;
+        }
+
+        .terminal-log {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 5px;
+            color: #3f3;
+            font-size: 14px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            line-height: 1.2;
+        }
+
+        .terminal-input-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        .terminal-prompt {
+            color: #3f3;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+            margin-right: 5px;
+            user-select: none;
+        }
+
+        .terminal-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: #3f3;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            outline: none;
+            pointer-events: auto;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* --- МОДАЛЬНЫЕ ОКНА --- */
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal-content {
+            background: #b0b0b0;
+            border: 4px solid #555;
+            padding: 15px;
+            width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            color: #000;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+            border-bottom: 2px solid #999;
+            padding-bottom: 5px;
+        }
+        .modal-close {
+            background: #c33; color: #fff; border: 1px solid #000;
+            width: 25px; height: 25px; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        .file-list {
+            background: #000; color: #3f3; border: 2px solid #555;
+            max-height: 200px; overflow-y: auto; margin-bottom: 10px;
+        }
+        .file-item {
+            padding: 8px; cursor: pointer; border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between;
+        }
+        .file-item:hover { background: #222; }
+        .file-item.selected { background: #333; border-left: 4px solid #3f3; }
+        .file-item .del-btn {
+            color: #f33; font-weight: bold; width: auto; height: auto; border: none; background: none; padding: 0 5px;
+        }
+        .file-item .del-btn:hover { color: #fff; background: #f33; }
+
+        .modal-actions {
+            display: flex; justify-content: flex-end; gap: 10px;
+        }
+        .modal-btn {
+            width: auto; padding: 8px 15px; background: #ccc; border: 2px solid #333;
+            font-size: 14px; font-weight: bold; cursor: pointer;
+        }
+
+        .doc-content {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #222;
+            color: #3f3;
+            padding: 10px;
+            border: 2px solid #555;
+        }
+        .doc-content h3 { color: #fff; margin: 10px 0 5px 0; font-size: 14px; border-bottom: 1px solid #555; }
+        .doc-content p { margin: 4px 0; }
+        .doc-content code { color: #ff0; background: #000; padding: 2px 4px; border-radius: 2px; }
+        .doc-content ul { margin: 4px 0; padding-left: 20px; }
+
+        /* 📱 МОБИЛЬНАЯ ВЕРСИЯ */
+        @media (max-width: 600px) {
+            body {
+                /* Убираем центрирование по высоте, чтобы клавиатура не ломала layout */
+                align-items: flex-start;
+                overflow: auto;
+                height: auto;
+            }
+            .wrapper {
+                height: auto;
+                min-height: 100vh;
+                padding: 10px 0;
+            }
+            .machine-container {
+                /*
+                   Отвязываем от vh, чтобы клавиатура не сжимала картинку.
+                   Используем ширину и пропорции, чтобы картинка была стабильной.
+                   Это создаст ползунок, но интерфейс не будет "прыгать".
+                */
+                height: auto;
+                width: 95vw;
+                aspect-ratio: 848 / 1747;
+                margin: 0 auto;
+            }
+            .screen-text, .editor-text, .terminal-input, .terminal-prompt, .terminal-log {
+                font-size: 14px;
+            }
+            /* Отключаем зум при фокусе на поле ввода (iOS) */
+            .editor-text, .terminal-input {
+                font-size: 16px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="machine-container">
+
+            <!-- Верхний экран -->
+            <div class="screen-zone" id="screen">
+                <div class="screen-text">
+                    <div id="bufferLine" style="margin-bottom:4px;">Buffer: <span class="time">WT: 0</span></div>
+                    <div id="codeView"></div>
+                </div>
+            </div>
+
+            <!-- Редактор кода -->
+            <div class="editor-zone">
+                <textarea class="editor-text" id="code" spellcheck="false"># Загадка от Жака Фреско
+dest main
+worldtime
+save time1
+dest theworld1
+worldtime
+save time2
+eval $time2$ - $time1$
+gtb 200
+jmpnot theworld1
+jmp main</textarea>
+            </div>
+
+            <!-- Кнопки -->
+            <div class="btn btn-power" id="btnPowerZone" onclick="togglePower()" title="Вкл/Выкл">
+                <img src="../img/btn_power_off.png" id="powerImg" alt="Power">
+            </div>
+
+            <div class="btn btn-ignore" onclick="toggleSetting('ignoreErrors')" title="Игнорировать ошибки">
+                <img src="../img/btn_ignore_off.png" id="ignoreImg" alt="Ignore">
+            </div>
+
+            <div class="btn btn-reboot" onclick="toggleSetting('autoReboot')" title="Автоперезагрузка">
+                <img src="../img/btn_reboot_off.png" id="rebootImg" alt="Reboot">
+            </div>
+
+            <div class="btn btn-step" onclick="stepOnce()" title="Шаг">
+                <img src="../img/btn_step.png" alt="Step">
+            </div>
+
+            <div class="btn btn-load" onclick="loadFromSelected()" title="Загрузить">
+                <img src="../img/btn_load.png" alt="Load">
+            </div>
+
+            <div class="btn btn-folder" onclick="openFolder()" title="Папка">
+                <img src="../img/btn_folder.png" alt="Folder">
+            </div>
+
+            <div class="btn btn-save" onclick="saveToFolder()" title="Сохранить">
+                <img src="../img/btn_save.png" alt="Save">
+            </div>
+
+            <div class="btn btn-doc" onclick="toggleDoc()" title="Документация">
+                <img src="../img/btn_doc.png" alt="Doc">
+            </div>
+
+            <!-- Нижний терминал (Симулятор РпР) -->
+            <div class="terminal-zone" id="terminal">
+                <div class="terminal-log" id="terminalLog"></div>
+                <div class="terminal-input-wrapper">
+                    <span class="terminal-prompt">></span>
+                    <input type="text" class="terminal-input" id="terminalInput" onkeydown="handleTerminalInput(event)">
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Модальное окно: Папка -->
+    <div class="modal-overlay" id="folderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Папка скриптов</span>
+                <button class="modal-close" onclick="closeFolder()">X</button>
+            </div>
+            <div class="file-list" id="fileList"></div>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="closeFolder()">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Документация -->
+    <div class="modal-overlay" id="docModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Справочник MS-ES1</span>
+                <button class="modal-close" onclick="toggleDoc()">X</button>
+            </div>
+            <div class="doc-content">
+                <h3>Основы</h3>
+                <p><code>clockspeed &lt;value&gt;</code> — устанавливает количество инструкций, обрабатываемых за тик.</p>
+                <p><code>splitter &lt;value&gt;</code> — текст-разделитель для команды <code>split</code> (поддерживает замену переменных).</p>
+                <p><code>endtick</code> — игнорирует скорость обработки и приостанавливает AUTOCAL до следующего игрового тика.</p>
+                <p><code>shutdown</code> — отключает питание AUTOCAL, мгновенно завершая программу.</p>
+
+                <h3>Управление памятью</h3>
+                <p><code>buffer &lt;value&gt;</code> — сохраняет указанное значение в буфер.</p>
+                <p><code>save &lt;var&gt;</code> — сохраняет содержимое буфера в переменную с указанным именем.</p>
+                <p><code>load &lt;var&gt;</code> — записывает значение указанной переменной в буфер.</p>
+                <p><code>concat &lt;value&gt;</code> — добавляет значение в конец буфера, позволяя объединять несколько значений (поддерживает замену переменных).</p>
+                <p><code>push [value]</code> — записывает указанное значение или буфер в стек (поддерживает замену переменных).</p>
+                <p><code>pop</code> — извлекает значение из стека и записывает его в буфер.</p>
+                <p><code>peek</code> — записывает значение из стека в буфер, не изменяя стек.</p>
+
+                <h3>Управление текстом</h3>
+                <p><code>first &lt;num&gt;</code> — записывает в буфер первые <code>num</code> символов буфера.</p>
+                <p><code>last &lt;num&gt;</code> — записывает в буфер последние <code>num</code> символов буфера.</p>
+                <p><code>length</code> — подсчитывает количество символов в буфере и записывает результат в буфер.</p>
+                <p><code>split &lt;index&gt;</code> — делит буфер по <code>splitter</code> и записывает в буфер фрагмент с указанным номером (начиная с 1).</p>
+                <p><code>splitcount</code> — делит буфер по <code>splitter</code> и записывает в буфер количество фрагментов.</p>
+
+                <h3>Вычисления</h3>
+                <p><code>eval [expression]</code> — вычисляет математическое выражение и сохраняет результат в буфер (поддерживает замену переменных).</p>
+                <p><code>evalr [expression]</code> — вычисляет математическое выражение и сохраняет округлённый результат в буфер.</p>
+                <p><code>round</code> / <code>nearest</code> — округляет содержимое буфера до ближайшего целого.</p>
+                <p><code>rounddown</code> / <code>floor</code> — округляет содержимое буфера в меньшую сторону.</p>
+                <p><code>roundup</code> / <code>ceil</code> — округляет содержимое буфера в большую сторону.</p>
+                <p><code>worldtime</code> — сохраняет в буфере количество тиков с момента создания мира.</p>
+
+                <h3>Сравнение (параметр vs буфер)</h3>
+                <p><code>eq &lt;value&gt;</code> — записывает <code>true</code> в буфер, если значение равно содержимому буфера (поддерживает замену переменных).</p>
+                <p><code>gtb &lt;value&gt;</code> — записывает <code>true</code> в буфер, если выполняется условие «больше, чем буфер» (поддерживает замену переменных).</p>
+                <p><code>ltb &lt;value&gt;</code> — записывает <code>true</code> в буфер, если выполняется условие «меньше, чем буфер» (поддерживает замену переменных).</p>
+                <p><code>geb &lt;value&gt;</code> — записывает <code>true</code> в буфер, если выполняется условие «больше или равен буферу» (поддерживает замену переменных).</p>
+                <p><code>leb &lt;value&gt;</code> — записывает <code>true</code> в буфер, если выполняется условие «меньше или равен буферу» (поддерживает замену переменных).</p>
+
+                <h3>Переходы</h3>
+                <p><code>dest &lt;name&gt;</code> — создаёт пункт назначения для прыжка с указанным именем.</p>
+                <p><code>jmp &lt;dest&gt;</code> — выполняет безусловный переход к пункту назначения (поддерживает замену переменных).</p>
+                <p><code>jmpif &lt;dest&gt;</code> — переходит к пункту назначения, если содержимое буфера истинно (поддерживает замену переменных).</p>
+                <p><code>jmpnot &lt;dest&gt;</code> — переходит к пункту назначения, если содержимое буфера ложно (поддерживает замену переменных).</p>
+
+                <h3>Редстоун-по-Радио</h3>
+                <p><code>send &lt;channel&gt;</code> — отправляет содержимое буфера в виде сигнала РпР по указанному каналу (поддерживает замену переменных).</p>
+                <p><code>listen &lt;channel&gt;</code> — принимает последний сигнал РпР по указанному каналу и записывает его в буфер (поддерживает замену переменных).</p>
+                <p><code>poll &lt;channel&gt;</code> — принимает текущий сигнал РпР по указанному каналу (с последнего игрового тика) и записывает его в буфер (поддерживает замену переменных).</p>
+                <h3>Терминал РпР</h3>
+                <p>Позволяет вводить РпР-команды прямо на экране терминала. Для начала задайте канал командой <code>chan &lt;ID&gt;</code>, куда будет отправляться сигнал.</p>
+                <p>Для непрерывной отправки сигнала введите <code>start</code>, затем саму команду. Для одиночного сигнала используйте <code>send</code>.</p>
+                <p>Чтобы остановить непрерывную отправку — команда <code>stop</code>. Для очистки всей истории сигналов — <code>clear</code>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let isRunning = false;
+    let emuState = null;
+    let emuInterval = null;
+    let virtualWorldTime = 0;
+    let settings = { ignoreErrors: false, autoReboot: false };
+
+    let scripts = JSON.parse(localStorage.getItem('autocal_scripts')) || {};
+    let selectedScriptId = null;
+
+    let outputLines = [];
+    const VIEW_LINES = 7;
+
+    // Сообщение в поток (для info — дописывается, для error/warn — стирает окно)
+    function logMsg(msg, cls = 'info') {
+        if (cls === 'error' || cls === 'warn') {
+            outputLines = [{ type: 'msg', msg, cls }];
+        } else {
+            outputLines.push({ type: 'msg', msg, cls });
+        }
+        if (outputLines.length > 500) outputLines.shift();
+        renderScreen();
+    }
+
+    // Полностью стереть окно и записать одно сообщение
+    function logClear(msg, cls = 'info') {
+        outputLines = [];
+        if (msg) outputLines.push({ type: 'msg', msg, cls });
+        renderScreen();
+    }
+
+    function logCode(lineNo, text) {
+        outputLines.push({ type: 'code', lineNo, text });
+        if (outputLines.length > 500) outputLines.shift();
+        renderScreen();
+    }
+
+    function renderScreen() {
+        const el = document.getElementById('codeView');
+        if (!el) return;
+        const tail = outputLines.slice(-VIEW_LINES);
+        let html = '';
+        for (const item of tail) {
+            if (item.type === 'msg') {
+                const color = item.cls === 'error' ? '#f33' : (item.cls === 'warn' ? '#ff0' : '#aaa');
+                html += `<div style="color:${color};">${item.msg}</div>`;
+            } else {
+                html += `<div>${item.lineNo}: ${item.text}</div>`;
+            }
+        }
+        el.innerHTML = html;
+    }
+
+    function updateBufferLine(state) {
+        const el = document.getElementById('bufferLine');
+        if (el) el.innerHTML = `Buffer: ${state.buffer} <span class="time">WT: ${virtualWorldTime}</span>`;
+    }
+
+    // --- Управление файлами ---
+    function saveScripts() { localStorage.setItem('autocal_scripts', JSON.stringify(scripts)); }
+    function openFolder() { document.getElementById('folderModal').classList.add('active'); renderFileList(); }
+    function closeFolder() { document.getElementById('folderModal').classList.remove('active'); }
+
+    function renderFileList() {
+        const list = document.getElementById('fileList');
+        list.innerHTML = '';
+        const keys = Object.keys(scripts).sort();
+        if (keys.length === 0) { list.innerHTML = '<div style="padding:10px; color:#aaa;">Папка пуста</div>'; return; }
+        keys.forEach(key => {
+            const div = document.createElement('div');
+            div.className = 'file-item' + (selectedScriptId === key ? ' selected' : '');
+            div.innerHTML = `<span>${key}.txt</span><button class="del-btn" onclick="deleteScript(event, '${key}')">X</button>`;
+            div.onclick = (e) => { if (e.target.classList.contains('del-btn')) return; selectedScriptId = key; renderFileList(); };
+            list.appendChild(div);
+        });
+    }
+
+    function deleteScript(e, key) {
+        e.stopPropagation();
+        delete scripts[key];
+        saveScripts();
+        if (selectedScriptId === key) selectedScriptId = null;
+        renderFileList();
+        logClear(`Удалён скрипт: ${key}.txt`);
+    }
+
+    function saveToFolder() {
+        const code = document.getElementById('code').value;
+        let maxNum = 0;
+        Object.keys(scripts).forEach(key => {
+            const num = parseInt(key.replace('script_', ''));
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+        });
+        const newName = `script_${maxNum + 1}`;
+        scripts[newName] = code;
+        saveScripts();
+        logClear(`Скрипт сохранён как ${newName}.txt`);
+        if (document.getElementById('folderModal').classList.contains('active')) renderFileList();
+    }
+
+    function loadFromSelected() {
+        if (!selectedScriptId) {
+            logClear(`Ошибка: скрипт не выбран. Откройте папку (📂) и выберите файл.`, 'error');
+            return;
+        }
+        document.getElementById('code').value = scripts[selectedScriptId];
+        stopEmulation();
+        logClear(`Загружен ${selectedScriptId}.txt`);
+        closeFolder();
+    }
+
+    // --- Настройки ---
+    function toggleSetting(name) {
+        settings[name] = !settings[name];
+        const btn = name === 'ignoreErrors' ? document.getElementById('ignoreImg') : document.getElementById('rebootImg');
+        const src = name === 'ignoreErrors'
+            ? (settings[name] ? '../img/btn_ignore_on.png' : '../img/btn_ignore_off.png')
+            : (settings[name] ? '../img/btn_reboot_on.png' : '../img/btn_reboot_off.png');
+        btn.src = src;
+
+        if (name === 'autoReboot') {
+            if (settings.autoReboot && !isRunning) {
+                emuState = null;
+                outputLines = [];
+                startEmulation();
+            } else if (!settings.autoReboot) {
+                // Если выключаем автоперезагрузку — принудительно останавливаем цикл
+                isRunning = false;
+                if (emuInterval) clearTimeout(emuInterval);
+                document.getElementById('powerImg').src = '../img/btn_power_off.png';
+                logClear(`Автоперезагрузка отключена.`, 'warn');
+            }
+        }
+    }
+
+    function togglePower() {
+        if (settings.autoReboot) {
+            logClear(`Ошибка: невозможно выключить AUTOCAL. Сначала отключите автоперезагрузку.`, 'error');
+            return;
+        }
+        if (isRunning) stopEmulation();
+        else { emuState = null; outputLines = []; startEmulation(); }
+    }
+
+    function toggleDoc() { document.getElementById('docModal').classList.toggle('active'); }
+
+    // --- Закрытие модальных окон кликом вне ---
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.classList.remove('active');
+        });
+    });
+
+    // --- Ввод в терминал РпР ---
+    let termChannel = null;
+    let repeatCmd = null;
+    let repeatActive = false;
+    let lastRepeatTick = -1;
+
+    function terminalPrint(msg) {
+        const log = document.getElementById('terminalLog');
+        const div = document.createElement('div');
+        div.textContent = msg;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function terminalSendSignal(value) {
+        if (!termChannel) return;
+        if (!emuState) {
+            if (!window.pendingChannels) window.pendingChannels = {};
+            window.pendingChannels[termChannel] = value;
+            return;
+        }
+        emuState.channels[termChannel] = value;
+    }
+
+    function terminalTick() {
+        if (!repeatActive || !repeatCmd) return;
+        if (lastRepeatTick === virtualWorldTime) return;
+        lastRepeatTick = virtualWorldTime;
+        terminalSendSignal(repeatCmd);
+    }
+
+    function handleTerminalInput(e) {
+        if (e.key !== 'Enter') return;
+        const input = document.getElementById('terminalInput');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+
+        const parts = text.split(' ');
+        const cmd = parts[0].toLowerCase();
+        const rest = parts.slice(1).join(' ');
+
+        if (cmd === 'chan') {
+            if (!rest) { terminalPrint('Ошибка: укажите ID канала.'); return; }
+            termChannel = rest;
+            terminalPrint(`Set channel to ${termChannel}`);
+            return;
+        }
+        if (cmd === 'start') {
+            if (!termChannel) { terminalPrint('Ошибка: сначала задайте канал (chan <ID>).'); return; }
+            if (!rest) { terminalPrint('Ошибка: укажите команду.'); return; }
+            repeatCmd = rest;
+            repeatActive = true;
+            lastRepeatTick = -1;
+            terminalPrint(`Repeating signal on ${termChannel}`);
+            terminalSendSignal(repeatCmd);
+            lastRepeatTick = virtualWorldTime;
+            return;
+        }
+        if (cmd === 'stop') {
+            repeatActive = false;
+            repeatCmd = null;
+            terminalPrint(`Stopping repeat signal`);
+            return;
+        }
+        if (cmd === 'send') {
+            if (!termChannel) { terminalPrint('Ошибка: сначала задайте канал.'); return; }
+            terminalSendSignal(rest);
+            terminalPrint(`Send signal to ${termChannel}: ${rest}`);
+            return;
+        }
+        if (cmd === 'clear') {
+            repeatActive = false;
+            repeatCmd = null;
+            if (emuState) { emuState.channels = {}; }
+            if (window.pendingChannels) window.pendingChannels = {};
+            terminalPrint('Cleared all history');
+            return;
+        }
+        terminalPrint(`Unknown command: ${cmd}`);
+    }
+
+    // --- Логика эмулятора ---
+    function initState(code) {
+        const lines = [];
+        for (let line of code.split('\n')) {
+            line = line.split('#')[0].trim();
+            if (line) lines.push(line);
+        }
+        const labels = {};
+        for (let i = 0; i < lines.length; i++) {
+            const parts = lines[i].split(/\s+/);
+            if (parts[0] === 'dest' && parts[1]) labels[parts[1]] = i;
+        }
+        return { lines, labels, buffer: '', vars: {}, stack: [], channels: {}, history: {}, splitter: ';', pc: 0, tick: 0, running: true };
+    }
+
+    function resolve(arg, state) {
+        return arg.replace(/\$(\w+)\$/g, (m, name) => {
+            if (name === 'buffer') return state.buffer;
+            return state.vars[name] !== undefined ? String(state.vars[name]) : '';
+        });
+    }
+
+    function evalExpr(expr, state) {
+        expr = resolve(expr, state).replace(/\$buffer\$/g, state.buffer);
+        if (!/^[0-9+\-*/(). %]+$/.test(expr)) throw new Error('Invalid math');
+        try { return String(eval(expr)); } catch (e) { throw new Error('Math error'); }
+    }
+
+    function step(state) {
+        if (state.pc >= state.lines.length) { return false; }
+        const line = state.lines[state.pc];
+        const parts = line.split(/\s+/);
+        const cmd = parts[0];
+        const arg = parts.slice(1).join(' ');
+        const a = resolve(arg, state);
+
+        try {
+            switch (cmd) {
+                case 'clockspeed': case 'nop': break;
+                case 'buffer': state.buffer = a; break;
+                case 'save': state.vars[a] = state.buffer; break;
+                case 'load': state.buffer = state.vars[a] !== undefined ? String(state.vars[a]) : ''; break;
+                case 'concat': state.buffer += state.vars[a] !== undefined ? String(state.vars[a]) : ''; break;
+                case 'splitter': state.splitter = a; break;
+                case 'split': {
+                    const idx = parseInt(a) - 1;
+                    const parts_s = state.buffer.split(state.splitter);
+                    state.buffer = (idx >= 0 && idx < parts_s.length) ? parts_s[idx] : '';
+                    break;
+                }
+                case 'splitcount': state.buffer = String(state.buffer.split(state.splitter).length); break;
+                case 'first': state.buffer = state.buffer.slice(0, parseInt(a)); break;
+                case 'last': state.buffer = parseInt(a) > 0 ? state.buffer.slice(-parseInt(a)) : ''; break;
+                case 'length': state.buffer = String(state.buffer.length); break;
+                case 'dest': break;
+                case 'jmp': {
+                    const target = state.labels[a];
+                    if (target === undefined) throw new Error('Missing JMP destination');
+                    state.pc = target; return true;
+                }
+                case 'jmpif': {
+                    if (state.buffer !== '' && state.buffer !== '0' && state.buffer !== 'false') {
+                        const target = state.labels[a];
+                        if (target === undefined) throw new Error('Missing JMP destination');
+                        state.pc = target; return true;
+                    } break;
+                }
+                case 'jmpnot': {
+                    if (state.buffer === '' || state.buffer === '0' || state.buffer === 'false') {
+                        const target = state.labels[a];
+                        if (target === undefined) throw new Error('Missing JMP destination');
+                        state.pc = target; return true;
+                    } break;
+                }
+                case 'eq': state.buffer = (state.buffer === a) ? 'true' : 'false'; break;
+                case 'gtb': state.buffer = (parseFloat(a) > parseFloat(state.buffer)) ? 'true' : 'false'; break;
+                case 'ltb': state.buffer = (parseFloat(a) < parseFloat(state.buffer)) ? 'true' : 'false'; break;
+                case 'geb': state.buffer = (parseFloat(a) >= parseFloat(state.buffer)) ? 'true' : 'false'; break;
+                case 'leb': state.buffer = (parseFloat(a) <= parseFloat(state.buffer)) ? 'true' : 'false'; break;
+                case 'eval': state.buffer = evalExpr(a, state); break;
+                case 'evalr': state.buffer = String(Math.trunc(parseFloat(evalExpr(a, state)))); break;
+                case 'round': case 'nearest': state.buffer = String(Math.round(parseFloat(state.buffer))); break;
+                case 'rounddown': case 'floor': state.buffer = String(Math.floor(parseFloat(state.buffer))); break;
+                case 'roundup': case 'ceil': state.buffer = String(Math.ceil(parseFloat(state.buffer))); break;
+                case 'send':
+                    state.channels[a] = state.buffer;
+                    if (!state.history[a]) state.history[a] = [];
+                    state.history[a].push(state.buffer); break;
+                case 'listen':
+                    state.buffer = state.channels[a] !== undefined ? state.channels[a] : '';
+                    break;
+                case 'poll':
+                    state.buffer = state.channels[a] !== undefined ? state.channels[a] : '';
+                    break;
+                case 'push': state.stack.push(a || state.buffer); break;
+                case 'pop': state.buffer = state.stack.length > 0 ? state.stack.pop() : ''; break;
+                case 'peek': state.buffer = state.stack.length > 0 ? state.stack[state.stack.length - 1] : ''; break;
+                case 'worldtime': state.buffer = String(virtualWorldTime); break;
+                case 'endtick': state.tick++; break;
+                case 'shutdown': return 'shutdown';
+                default: throw new Error('Unrecognized command');
+            }
+        } catch (e) {
+            if (settings.ignoreErrors) { logMsg(`Пропущена ошибка (стр. ${state.pc + 1}): ${e.message}`, 'warn'); }
+            else { throw new Error('Line ' + (state.pc + 1) + ': ' + e.message); }
+        }
+        state.pc++;
+        return true;
+    }
+
+    function startEmulation() {
+        if (isRunning) return;
+        const code = document.getElementById('code').value;
+
+        try {
+            emuState = initState(code);
+            if (emuState.lines.length === 0) throw new Error("No code");
+            virtualWorldTime = 0;
+            outputLines = [];
+            if (window.pendingChannels) {
+                for (const [ch, val] of Object.entries(window.pendingChannels)) {
+                    emuState.channels[ch] = val;
+                }
+                window.pendingChannels = {};
+            }
+        } catch (e) {
+            updateBufferLine({ buffer: '' });
+            logClear(`Ошибка запуска: ${e.message}`, 'error');
+            return;
+        }
+
+        isRunning = true;
+        document.getElementById('powerImg').src = '../img/btn_power_on.png';
+        logMsg(`AUTOCAL запущен`);
+        updateBufferLine(emuState);
+
+        function loop() {
+            if (!isRunning) return;
+            try {
+                const prevPc = emuState.pc;
+                let res = step(emuState);
+                virtualWorldTime++;
+                terminalTick();
+                if (prevPc !== emuState.pc) {
+                    logCode(prevPc + 1, emuState.lines[prevPc]);
+                }
+
+                if (res === false || res === 'shutdown') {
+                    if (settings.autoReboot) {
+                        // Если автоперезагрузка включена, мы перезапускаем цикл
+                        logClear(`Скрипт завершён. Автоперезагрузка...`, 'warn');
+                        setTimeout(() => {
+                            emuState = null;
+                            startEmulation();
+                        }, 100);
+                    } else {
+                        isRunning = false;
+                        document.getElementById('powerImg').src = '../img/btn_power_off.png';
+                        logMsg(`Скрипт завершён`);
+                    }
+                    return;
+                }
+
+                updateBufferLine(emuState);
+                if (isRunning) { emuInterval = setTimeout(loop, 50); }
+            } catch (e) {
+                if (settings.autoReboot) {
+                    logClear(`Ошибка: ${e.message}. Автоперезагрузка...`, 'error');
+                    setTimeout(() => {
+                        emuState = null;
+                        startEmulation();
+                    }, 500);
+                    return;
+                }
+                isRunning = false;
+                document.getElementById('powerImg').src = '../img/btn_power_off.png';
+                updateBufferLine(emuState);
+                logClear(`Ошибка: ${e.message}`, 'error');
+                logMsg(`AUTOCAL выключен`, 'error');
+            }
+        }
+        loop();
+    }
+
+    function stepOnce() {
+        if (isRunning) { stopEmulation(); }
+        const code = document.getElementById('code').value;
+
+        if (!emuState || emuState.pc >= emuState.lines.length) {
+            try {
+                emuState = initState(code);
+                if (emuState.lines.length === 0) throw new Error("No code");
+                virtualWorldTime = 0;
+                outputLines = [];
+            } catch (e) {
+                updateBufferLine({ buffer: '' });
+                logClear(`Ошибка запуска: ${e.message}`, 'error');
+                return;
+            }
+            updateBufferLine(emuState);
+            return;
+        }
+
+        try {
+            const prevPc = emuState.pc;
+            let res = step(emuState);
+            virtualWorldTime++;
+
+            if (prevPc !== emuState.pc) {
+                logCode(prevPc + 1, emuState.lines[prevPc]);
+            }
+
+            updateBufferLine(emuState);
+
+            if (res === false || res === 'shutdown') {
+                logClear(`Скрипт завершён (нажмите Шаг для перезапуска)`);
+            }
+        } catch (e) {
+            updateBufferLine(emuState);
+            logClear(`Ошибка: ${e.message}`, 'error');
+            logMsg(`Нажмите Шаг для перезапуска`, 'warn');
+            emuState.pc = emuState.lines.length;
+        }
+    }
+
+    function stopEmulation() {
+        isRunning = false;
+        if (emuInterval) clearTimeout(emuInterval);
+        document.getElementById('powerImg').src = '../img/btn_power_off.png';
+        if (emuState) {
+            logClear(`Выключено вручную`, 'warn');
+            updateBufferLine(emuState);
+        }
+    }
+</script>
+</body>
+</html>
