@@ -59,12 +59,19 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: filter 0.1s ease;
-        }
+            transition: filter 0.15s ease;
+}
 
-        .btn:hover { filter: brightness(0.8); }
-        .btn:active { filter: brightness(0.5); }
+/* Эффекты ТОЛЬКО для ПК (мышь) */
+@media (hover: hover) and (pointer: fine) {
+    .btn:hover { filter: brightness(0.8); }
+    .btn:active { filter: brightness(0.5); }
+}
 
+/* Эффект ТОЛЬКО для телефона (палец) */
+.btn.pressed {
+    filter: brightness(0.5);
+}
         .btn img {
             width: 100%;
             height: 100%;
@@ -864,6 +871,20 @@ jmp main</textarea>
             updateBufferLine(emuState);
         }
     }
+    // Обработка касаний ТОЛЬКО для телефонов
+document.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('touchstart', () => {
+        btn.classList.add('pressed');
+    }, { passive: true });
+
+    btn.addEventListener('touchend', () => {
+        btn.classList.remove('pressed');
+    });
+
+    btn.addEventListener('touchcancel', () => {
+        btn.classList.remove('pressed');
+    });
+});
 </script>
 </body>
 </html>
