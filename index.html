@@ -84,8 +84,10 @@
             position: absolute;
             top: 20%; left: 2%; width: 95.7%; height: 18.3%;
             background: transparent;
+            overflow-x: auto
             overflow: hidden;
             pointer-events: auto;
+            white-space: nowrap;
         }
         .screen-text {
             color: #3f3;
@@ -93,7 +95,7 @@
             padding: 10px;
             height: 100%;
             overflow: hidden;
-            white-space: normal;
+            white-space: pre;
         }
         .screen-text .error { color: #f33; font-weight: bold; }
         .screen-text .info { color: #aaa; font-style: italic; }
@@ -106,7 +108,7 @@
         .editor-text {
             width: 100%; height: 100%; background: transparent; color: #3f3; border: none;
             font-family: 'Courier New', monospace; font-size: 16px; resize: none; outline: none;
-            padding: 10px; pointer-events: auto;
+            padding: 10px; pointer-events: auto; white-space: pre; overwlow-x: auto;
         }
 
         /* --- КООРДИНАТЫ КНОПОК --- */
