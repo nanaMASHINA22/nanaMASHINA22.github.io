@@ -244,18 +244,22 @@
             body {
                 align-items: flex-start;
                 overflow: auto;
-                height: auto;
+                height: 100dvh;
+                min-height: 100dvh;
+                display: block;
             }
             .wrapper {
                 height: auto;
-                min-height: 100vh;
+                min-height: 100dvh;
                 padding: 10px 0;
+                display: block;
             }
             .machine-container {
                 height: auto;
                 width: 95vw;
                 aspect-ratio: 848 / 1747;
                 margin: 0 auto;
+                flex-shrink: 0;
             }
             .screen-text, .editor-text, .terminal-input, .terminal-prompt, .terminal-log {
                 font-size: 18px;
